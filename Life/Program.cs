@@ -1,12 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Text.Json;
+using ScottPlot;
 
 namespace cli_life
 {
+    public class Config
+    {
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int CellSize { get; set; }
+        public double LiveDensity { get; set; }
+    }
     public class Cell
     {
         public bool IsAlive;
@@ -89,13 +99,13 @@ namespace cli_life
     class Program
     {
         static Board board;
-        static private void Reset()
+        static private void Reset(Config config)
         {
             board = new Board(
-                width: 50,
-                height: 20,
-                cellSize: 1,
-                liveDensity: 0.5);
+                width: config.Width,
+                height: config.Height,
+                cellSize: config.CellSize,
+                liveDensity: config.LiveDensity);
         }
         static void Render()
         {
@@ -116,16 +126,79 @@ namespace cli_life
                 Console.Write('\n');
             }
         }
+        static Config LoadConfig(string path = "settings.json")
+        {
+            string json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<Config>(json);
+        }
+        static void SaveState(string path)
+        {
+            using StreamWriter writer = new StreamWriter(path);
+            for (int y = 0; y < board.Rows; y++)
+            {
+                for (int x = 0; x < board.Columns; x++)
+                { 
+                    writer.Write(board.Cells[x, y].IsAlive ? '1' : '0');
+                }
+                writer.WriteLine();
+            }
+        }
+
+        static void LoadState(string path)
+        {
+            var lines = File.ReadAllLines(path);
+            for (int y = 0; y < lines.Length && y < board.Rows; y++)
+            {
+                for (int x = 0; x < lines[y].Length && x < board.Columns; x++)
+                {
+                    board.Cells[x, y].IsAlive = lines[y][x] == '1';
+                }
+            }
+        }
         static void Main(string[] args)
         {
-            Reset();
-            while(true)
+
+            var config = LoadConfig();
+            Reset(config);
+            
+            if (File.Exists("state.txt"))
             {
-                Console.Clear();
+                Console.WriteLine("Загрузить предыдущее состояние? (y/n)");
+                if (Console.ReadKey(true).Key == ConsoleKey.Y)
+                {
+                    LoadState("state.txt");
+                }
+            }
+
+            while (true)
+            {
                 Render();
                 board.Advance();
-                Thread.Sleep(1000);
+                Thread.Sleep(200);
+
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true).Key;
+                    if (key == ConsoleKey.S)
+                    {
+                        SaveState("state.txt");
+                        Console.WriteLine("Состояние сохранено.");
+                        Console.WriteLine("Продолжить? (y/n)");
+
+                        if (Console.ReadKey(true).Key == ConsoleKey.N)
+                        {
+                            Console.WriteLine("Выход...");
+                            break;
+                        }
+                    }
+                    else if (key == ConsoleKey.Q)
+                    {
+                        Console.WriteLine("Выход...");
+                        break;
+                    }
+                }
             }
+            
         }
     }
 }
