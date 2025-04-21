@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Text.Json;
 using ScottPlot;
+using ScottPlot.Plottables;
 
 namespace cli_life
 {
@@ -107,6 +108,7 @@ namespace cli_life
                 cellSize: config.CellSize,
                 liveDensity: config.LiveDensity);
         }
+        
         static void Render()
         {
             for (int row = 0; row < board.Rows; row++)
@@ -126,11 +128,13 @@ namespace cli_life
                 Console.Write('\n');
             }
         }
+        
         static Config LoadConfig(string path = "settings.json")
         {
             string json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<Config>(json);
         }
+        
         static void SaveState(string path)
         {
             using StreamWriter writer = new StreamWriter(path);
@@ -143,6 +147,7 @@ namespace cli_life
                 writer.WriteLine();
             }
         }
+        
 
         static void LoadState(string path)
         {
@@ -155,24 +160,149 @@ namespace cli_life
                 }
             }
         }
+
+        static List<(int x, int y)> GetAliveCluster(bool[,] visited, int startX, int startY)
+        {
+            var cluster = new List<(int x, int y)>();
+            var queue = new Queue<(int x, int y)>();
+            queue.Enqueue((startX, startY));
+            visited[startX, startY] = true;
+
+            int[] dx = { -1, 0, 1, -1, 1, -1, 0, 1 };
+            int[] dy = { -1, -1, -1, 0, 0, 1, 1, 1 };
+
+            while (queue.Count > 0)
+            {
+                var (x, y) = queue.Dequeue();
+                cluster.Add((x, y));
+
+                for (int i = 0; i < 8; i++)
+                {
+                    int nx = x + dx[i];
+                    int ny = y + dy[i];
+
+                    if (nx >= 0 && nx < board.Columns && ny >= 0 && ny < board.Rows)
+                    {
+                        if (!visited[nx, ny] && board.Cells[nx, ny].IsAlive)
+                        {
+                            visited[nx, ny] = true;
+                            queue.Enqueue((nx, ny));
+                        }
+                    }
+                }
+            }
+
+            return cluster;
+        }
+
+        static void AnalyzeBoard()
+        {
+            bool[,] visited = new bool[board.Columns, board.Rows];
+            var figureCounts = new Dictionary<string, int>();
+
+            for (int x = 0; x < board.Columns; x++)
+            {
+                for (int y = 0; y < board.Rows; y++)
+                {
+                    if (board.Cells[x, y].IsAlive && !visited[x, y])
+                    {
+                        var cluster = GetAliveCluster(visited, x, y);
+                        var normalized = FigureRecognizer.NormalizeCluster(cluster);
+                        var matched = FigureRecognizer.Match(normalized);
+
+                        if (matched != null)
+                        {
+                            if (!figureCounts.ContainsKey(matched.Name))
+                                figureCounts[matched.Name] = 0;
+
+                            figureCounts[matched.Name]++;
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine("\n--- Обнаруженные фигуры ---");
+            foreach (var kv in figureCounts.OrderBy(k => k.Key))
+            {
+                Console.WriteLine($"{kv.Key}: {kv.Value}");
+            }
+            Console.WriteLine("\n");
+        }
+
+        static void RunDensityExperiment()
+        {
+            Console.WriteLine("Запуск эксперимента. Построение графика");
+            var config = LoadConfig();
+            int width = config.Width;
+            int height = config.Height;
+            int cellSize = config.CellSize;
+            int generations = 200;
+
+            double[] densities = new double[] { 0.1, 0.2, 0.3, 0.4, 0.5 };
+            var plot = new Plot();
+            var sb = new StringBuilder();
+
+            foreach (var density in densities)
+            {
+                var board = new Board(width, height, cellSize, density);
+                List<double> aliveCounts = new List<double>();
+
+                sb.AppendLine($"Density: {density}");
+                for (int gen = 0; gen < generations; gen++)
+                {
+                    int alive = 0;
+                    foreach (var cell in board.Cells)
+                        if (cell.IsAlive)
+                            alive++;
+
+                    aliveCounts.Add(alive);
+                    sb.AppendLine($"{gen} {alive}");
+                    board.Advance();
+                }
+                double[] xs = Enumerable.Range(0, generations).Select(i => (double)i).ToArray();
+                double[] ys = aliveCounts.ToArray();
+
+                var scatter = plot.Add.Scatter(xs, ys);
+                scatter.Label = $"Density {density}";
+            }
+
+            plot.ShowLegend();
+            plot.Legend.Location = Alignment.UpperRight;
+            plot.Title("Живые клетки по поколениям");
+            plot.XLabel("Поколение");
+            plot.YLabel("Живые клетки");
+
+            string projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
+            string plotPath = Path.Combine(projectDir, "density_plot.png");
+            string dataPath = Path.Combine(projectDir, "density_data.txt");
+            
+            plot.SavePng(plotPath, 800, 600);
+            Console.WriteLine("График сохранен как density_plot.png");
+            
+            File.WriteAllText(dataPath, sb.ToString());
+            Console.WriteLine("Данные сохранены в density_data.txt");
+        }
+        
         static void Main(string[] args)
         {
-
+            string projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
+            string statePath = Path.Combine(projectDir, "state.txt");
             var config = LoadConfig();
             Reset(config);
             
-            if (File.Exists("state.txt"))
+            if (File.Exists(statePath))
             {
                 Console.WriteLine("Загрузить предыдущее состояние? (y/n)");
                 if (Console.ReadKey(true).Key == ConsoleKey.Y)
                 {
-                    LoadState("state.txt");
+                    LoadState(statePath);
                 }
             }
 
             while (true)
             {
                 Render();
+                AnalyzeBoard(); // <-- вызов анализа
                 board.Advance();
                 Thread.Sleep(200);
 
@@ -181,7 +311,7 @@ namespace cli_life
                     var key = Console.ReadKey(true).Key;
                     if (key == ConsoleKey.S)
                     {
-                        SaveState("state.txt");
+                        SaveState(statePath);
                         Console.WriteLine("Состояние сохранено.");
                         Console.WriteLine("Продолжить? (y/n)");
 
@@ -198,7 +328,8 @@ namespace cli_life
                     }
                 }
             }
-            
+            RunDensityExperiment();
+
         }
     }
 }
