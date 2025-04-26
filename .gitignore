@@ -1,0 +1,50 @@
+# Build results
+Life/bin/
+Life/obj/
+LifeTests/bin/
+LifeTests/obj/
+
+# Rider / JetBrains IDEs
+.idea/
+*.sln.iml
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# User-specific files
+*.swp
+*.tmp
+
+# Dotnet specific
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Publish output
+*.publish/
+
+# Nuke Build
+.nuke/
+
+# Test Results
+TestResults/
+*.coverage
+*.coveragexml
+*.testresults
+
+# Temporary files
+~$*
