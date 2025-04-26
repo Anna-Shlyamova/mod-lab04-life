@@ -100,7 +100,7 @@ namespace cli_life
     class Program
     {
         static Board board;
-        static private void Reset(Config config)
+        internal static void Reset(Config config)
         {
             board = new Board(
                 width: config.Width,
@@ -129,13 +129,13 @@ namespace cli_life
             }
         }
         
-        static Config LoadConfig(string path = "settings.json")
+        internal static Config LoadConfig(string path = "settings.json")
         {
             string json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<Config>(json);
         }
         
-        static void SaveState(string path)
+        internal static void SaveState(string path)
         {
             using StreamWriter writer = new StreamWriter(path);
             for (int y = 0; y < board.Rows; y++)
@@ -149,7 +149,7 @@ namespace cli_life
         }
         
 
-        static void LoadState(string path)
+        internal static void LoadState(string path)
         {
             var lines = File.ReadAllLines(path);
             for (int y = 0; y < lines.Length && y < board.Rows; y++)
@@ -195,7 +195,7 @@ namespace cli_life
             return cluster;
         }
 
-        static void AnalyzeBoard()
+        internal static void AnalyzeBoard()
         {
             bool[,] visited = new bool[board.Columns, board.Rows];
             var figureCounts = new Dictionary<string, int>();
@@ -229,7 +229,7 @@ namespace cli_life
             Console.WriteLine("\n");
         }
 
-        static void RunDensityExperiment()
+        internal static void RunDensityExperiment()
         {
             Console.WriteLine("Запуск эксперимента. Построение графика");
             var config = LoadConfig();
@@ -302,7 +302,7 @@ namespace cli_life
             while (true)
             {
                 Render();
-                AnalyzeBoard(); // <-- вызов анализа
+                AnalyzeBoard();
                 board.Advance();
                 Thread.Sleep(200);
 
