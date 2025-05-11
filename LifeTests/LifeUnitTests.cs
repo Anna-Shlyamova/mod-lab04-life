@@ -179,16 +179,16 @@ public class LifeUnitTests
         [Fact]
         public void RunDensityExperiment_ReturnsValidDensity()
         {
-            var plotPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "density_plot.png"));
-            var dataPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "density_data.txt"));
+            var plotPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "plot.png"));
+            var dataPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "data.txt"));
     
             if (File.Exists(plotPath)) File.Delete(plotPath);
             if (File.Exists(dataPath)) File.Delete(dataPath);
 
             Program.RunDensityExperiment();
 
-            Assert.True(File.Exists(plotPath), "Файл графика density_plot.png должен быть создан.");
-            Assert.True(File.Exists(dataPath), "Файл данных density_data.txt должен быть создан.");
+            Assert.True(File.Exists(plotPath), "Файл графика plot.png должен быть создан.");
+            Assert.True(File.Exists(dataPath), "Файл данных data.txt должен быть создан.");
 
             var plotInfo = new FileInfo(plotPath);
             var dataInfo = new FileInfo(dataPath);
