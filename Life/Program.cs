@@ -273,14 +273,14 @@ namespace cli_life
             plot.YLabel("Живые клетки");
 
             string projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
-            string plotPath = Path.Combine(projectDir, "density_plot.png");
-            string dataPath = Path.Combine(projectDir, "density_data.txt");
+            string plotPath = Path.Combine(projectDir, "plot.png");
+            string dataPath = Path.Combine(projectDir, "data.txt");
             
             plot.SavePng(plotPath, 800, 600);
-            Console.WriteLine("График сохранен как density_plot.png");
+            Console.WriteLine("График сохранен как plot.png");
             
             File.WriteAllText(dataPath, sb.ToString());
-            Console.WriteLine("Данные сохранены в density_data.txt");
+            Console.WriteLine("Данные сохранены в data.txt");
         }
         
         static void Main(string[] args)
